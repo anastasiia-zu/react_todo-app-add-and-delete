@@ -1,26 +1,98 @@
+/* eslint-disable prettier/prettier */
 /* eslint-disable max-len */
-/* eslint-disable jsx-a11y/control-has-associated-label */
-import React from 'react';
+/* eslint-disable jsx-a11y/label-has-associated-control */
+import React, { useEffect, useState } from 'react';
 import { UserWarning } from './UserWarning';
-
-const USER_ID = 0;
+import { getTodos, USER_ID } from './api/todos';
+import { ErrorNotification } from './components/Error/ErrorNotification';
+import { TodoFooter } from './components/Footer/Footer';
+import { Header } from './components/Header/Header';
+import { TodoList } from './components/TodoList/TodoList';
+import { Todo } from './types/Todo';
+import { Errors, FilterOptions } from './types/enums/Enums';
 
 export const App: React.FC = () => {
+  const handleFilteredTodos = (
+    todos: Todo[],
+    filterSelected: FilterOptions,
+  ) => {
+    switch (filterSelected) {
+      case FilterOptions.active:
+        return todos.filter(todo => !todo.completed);
+      case FilterOptions.completed:
+        return todos.filter(todo => todo.completed);
+      default:
+        return todos;
+    }
+  };
+
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [errorMessage, setErrorMessage] = useState<Errors | null>(null);
+  const [filterSelected, setFilterSelected] = useState<FilterOptions>(
+    FilterOptions.all,
+  );
+
+  const preparedTodos = handleFilteredTodos(todos, filterSelected);
+  const activeTodos = handleFilteredTodos(todos, FilterOptions.active);
+  const completedTodos = handleFilteredTodos(todos, FilterOptions.completed);
+
+  const toggleTodo = (todoId: number, completed: boolean) => {
+    setTodos(currentTodos =>
+      currentTodos.map(todo =>
+        todo.id === todoId ? { ...todo, completed } : todo,
+      ),
+    );
+  };
+
+  const clearErrorMessage = () => {
+    setErrorMessage(null);
+  };
+
+  const showError = (error: Errors) => {
+    setErrorMessage(error);
+
+    setTimeout(() => {
+      clearErrorMessage();
+    }, 3000);
+  };
+
+  useEffect(() => {
+    clearErrorMessage();
+    getTodos()
+      .then(setTodos)
+      .catch(() => {
+        showError(Errors.LoadTodos);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   if (!USER_ID) {
     return <UserWarning />;
   }
 
   return (
-    <section className="section container">
-      <p className="title is-4">
-        Copy all you need from the prev task:
-        <br />
-        <a href="https://github.com/mate-academy/react_todo-app-loading-todos#react-todo-app-load-todos">
-          React Todo App - Load Todos
-        </a>
-      </p>
+    <div className="todoapp">
+      <h1 className="todoapp__title">todos</h1>
 
-      <p className="subtitle">Styles are already copied</p>
-    </section>
+      <div className="todoapp__content">
+        <Header />
+
+        <TodoList todos={preparedTodos} toggleTodo={toggleTodo} />
+
+        {todos.length > 0 && (
+          <TodoFooter
+            activeTodos={activeTodos}
+            completedTodos={completedTodos}
+            filterSelected={filterSelected}
+            setFilterSelected={setFilterSelected}
+          />
+        )}
+      </div>
+
+      <ErrorNotification
+        errorMessage={errorMessage}
+        clearErrorMessage={clearErrorMessage}
+      />
+    </div>
   );
 };
