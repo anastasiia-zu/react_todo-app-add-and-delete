@@ -7,6 +7,7 @@ interface TodoFooterProps {
   completedTodos: Todo[];
   filterSelected: FilterOptions;
   setFilterSelected: (filterSelected: FilterOptions) => void;
+  handleClearCompleted: () => void;
 }
 
 export const TodoFooter: React.FC<TodoFooterProps> = ({
@@ -14,6 +15,7 @@ export const TodoFooter: React.FC<TodoFooterProps> = ({
   completedTodos,
   filterSelected,
   setFilterSelected,
+  handleClearCompleted,
 }) => {
   return (
     <footer className="todoapp__footer" data-cy="Footer">
@@ -31,6 +33,7 @@ export const TodoFooter: React.FC<TodoFooterProps> = ({
         className="todoapp__clear-completed"
         data-cy="ClearCompletedButton"
         disabled={completedTodos.length === 0}
+        onClick={handleClearCompleted}
       >
         Clear completed
       </button>

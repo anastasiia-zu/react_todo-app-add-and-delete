@@ -1,9 +1,9 @@
 /* eslint-disable prettier/prettier */
 /* eslint-disable max-len */
 /* eslint-disable jsx-a11y/label-has-associated-control */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { UserWarning } from './UserWarning';
-import { getTodos, USER_ID } from './api/todos';
+import { addTodo, deleteTodo, getTodos, USER_ID } from './api/todos';
 import { ErrorNotification } from './components/Error/ErrorNotification';
 import { TodoFooter } from './components/Footer/Footer';
 import { Header } from './components/Header/Header';
@@ -31,6 +31,11 @@ export const App: React.FC = () => {
   const [filterSelected, setFilterSelected] = useState<FilterOptions>(
     FilterOptions.all,
   );
+  const [tempTodo, setTempTodo] = useState<Todo | null>(null);
+  const [loadingTodoIds, setLoadingTodoIds] = useState<number[]>([]);
+  const [newTitle, setNewTitle] = useState('');
+
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const preparedTodos = handleFilteredTodos(todos, filterSelected);
   const activeTodos = handleFilteredTodos(todos, FilterOptions.active);
@@ -56,6 +61,89 @@ export const App: React.FC = () => {
     }, 3000);
   };
 
+  const addNewTodo = async () => {
+    const trimmedTitle = newTitle.trim();
+
+    if (!trimmedTitle) {
+      showError(Errors.EmptyTitle);
+
+      return;
+    }
+
+    const newTodo = {
+      userId: USER_ID,
+      title: trimmedTitle,
+      completed: false,
+    };
+
+    setTempTodo({ ...newTodo, id: 0 });
+
+    try {
+      const createdTodo = await addTodo(newTodo);
+
+      setTodos(current => [...current, createdTodo]);
+      setNewTitle('');
+    } catch {
+      showError(Errors.AddTodo);
+    } finally {
+      setTempTodo(null);
+    }
+  };
+
+  const handleDeleteTodo = (todoId: number) => {
+    setLoadingTodoIds(current => [...current, todoId]);
+
+    deleteTodo(todoId)
+      .then(() => {
+        setTodos(current => current.filter(todo => todo.id !== todoId));
+      })
+      .catch(() => {
+        showError(Errors.DeleteTodo);
+      })
+      .finally(() => {
+        setLoadingTodoIds(current => current.filter(id => id !== todoId));
+      });
+  };
+
+  const handleClearCompleted = () => {
+    const completed = todos.filter(todo => todo.completed);
+
+    if (completed.length === 0) {
+      return;
+    }
+
+    completed.forEach(todo => {
+      setLoadingTodoIds(prev => [...prev, todo.id]);
+
+      deleteTodo(todo.id)
+        .then(() => {
+          setTodos(current => current.filter(t => t.id !== todo.id));
+        })
+        .catch(() => {
+          showError(Errors.DeleteTodo);
+        })
+        .finally(() => {
+          setLoadingTodoIds(prev => prev.filter(id => id !== todo.id));
+        });
+    });
+  };
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (tempTodo === null) {
+      inputRef.current?.focus();
+    }
+  }, [tempTodo]);
+
+  useEffect(() => {
+    if (loadingTodoIds.length === 0) {
+      inputRef.current?.focus();
+    }
+  }, [loadingTodoIds]);
+
   useEffect(() => {
     clearErrorMessage();
     getTodos()
@@ -75,9 +163,20 @@ export const App: React.FC = () => {
       <h1 className="todoapp__title">todos</h1>
 
       <div className="todoapp__content">
-        <Header />
+        <Header
+          newTitle={newTitle}
+          setNewTitle={setNewTitle}
+          addNewTodo={addNewTodo}
+          tempTodo={tempTodo}
+          inputRef={inputRef}
+        />
 
-        <TodoList todos={preparedTodos} toggleTodo={toggleTodo} />
+        <TodoList
+          todos={tempTodo ? [...preparedTodos, tempTodo] : preparedTodos}
+          toggleTodo={toggleTodo}
+          deleteTodo={handleDeleteTodo}
+          loadingTodoIds={loadingTodoIds}
+        />
 
         {todos.length > 0 && (
           <TodoFooter
@@ -85,6 +184,7 @@ export const App: React.FC = () => {
             completedTodos={completedTodos}
             filterSelected={filterSelected}
             setFilterSelected={setFilterSelected}
+            handleClearCompleted={handleClearCompleted}
           />
         )}
       </div>

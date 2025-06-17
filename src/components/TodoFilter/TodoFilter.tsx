@@ -1,10 +1,5 @@
 import classNames from 'classnames';
-
-export enum FilterOptions {
-  all = 'All',
-  active = 'Active',
-  completed = 'Completed',
-}
+import { FilterOptions } from '../../types/enums/Enums';
 
 interface TodoFilterProps {
   filterSelected: FilterOptions;

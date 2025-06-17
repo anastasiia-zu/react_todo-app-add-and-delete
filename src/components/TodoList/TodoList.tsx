@@ -13,9 +13,16 @@ interface Todo {
 interface Props {
   todos: Todo[];
   toggleTodo: (todoId: number, completed: boolean) => void;
+  deleteTodo: (todoId: number) => void;
+  loadingTodoIds: number[];
 }
 
-export const TodoList: React.FC<Props> = ({ todos, toggleTodo }) => {
+export const TodoList: React.FC<Props> = ({
+  todos,
+  toggleTodo,
+  deleteTodo,
+  loadingTodoIds,
+}) => {
   return (
     <section className="todoapp__main" data-cy="TodoList">
       {todos.map(todo => {
@@ -47,12 +54,21 @@ export const TodoList: React.FC<Props> = ({ todos, toggleTodo }) => {
             </span>
 
             {/* Remove button appears only on hover */}
-            <button type="button" className="todo__remove" data-cy="TodoDelete">
+            <button
+              type="button"
+              className="todo__remove"
+              data-cy="TodoDelete"
+              onClick={() => deleteTodo(id)}
+            >
               ×
             </button>
 
-            {/* overlay will cover the todo while it is being deleted or updated */}
-            <div data-cy="TodoLoader" className={classNames('modal overlay')}>
+            <div
+              data-cy="TodoLoader"
+              className={classNames('modal overlay', {
+                'is-active': loadingTodoIds.includes(id) || id === 0,
+              })}
+            >
               <div className="modal-background has-background-white-ter" />
               <div className="loader" />
             </div>
